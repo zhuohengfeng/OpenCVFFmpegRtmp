@@ -1,0 +1,12 @@
+//
+// Created by hengfeng zhuo on 2019-07-20.
+//
+
+#ifndef OPENCVFFMPEGRTMP_XMEDIAENCODE_H
+#define OPENCVFFMPEGRTMP_XMEDIAENCODE_H
+
+
+
+
+
+#endif //OPENCVFFMPEGRTMP_XMEDIAENCODE_H
