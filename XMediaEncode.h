@@ -5,7 +5,7 @@
 #ifndef OPENCVFFMPEGRTMP_XMEDIAENCODE_H
 #define OPENCVFFMPEGRTMP_XMEDIAENCODE_H
 
-
+#include "main.h"
 
 
 
