@@ -44,8 +44,12 @@ public:
         av_dump_format(avFormatContext, 0, outURL.c_str(), 1);
 
         if (codecContext->codec_type == AVMEDIA_TYPE_VIDEO) {
-            this->avCodecContext = codecContext;
+            this->videoCodecContext = codecContext;
             this->videoStream = avStream;
+        }
+        else if (codecContext->codec_type == AVMEDIA_TYPE_AUDIO) {
+            this->audioCodecContext = codecContext;
+            this->audioStream = avStream;
         }
         return true;
     }
@@ -73,10 +77,30 @@ public:
     // RTMP推流
     bool SendFrame(AVPacket* pack) {
         if (pack->size <= 0 || !pack->data)return false;
+
+        AVRational stime;
+        AVRational dtime;
+
+        //判断是音频还是视频
+        if (videoStream && videoCodecContext && pack->stream_index == videoStream->index)
+        {
+            stime = videoCodecContext->time_base;
+            dtime = videoStream->time_base;
+        }
+        else if (audioStream && audioCodecContext &&pack->stream_index == audioStream->index)
+        {
+            stime = audioCodecContext->time_base;
+            dtime = audioStream->time_base;
+        }
+        else
+        {
+            return false;
+        }
+
         //推流
-        pack->pts = av_rescale_q(pack->pts, avCodecContext->time_base, videoStream->time_base);
-        pack->dts = av_rescale_q(pack->dts, avCodecContext->time_base, videoStream->time_base);
-        pack->duration = av_rescale_q(pack->duration, avCodecContext->time_base, videoStream->time_base);
+        pack->pts = av_rescale_q(pack->pts, stime, dtime);
+        pack->dts = av_rescale_q(pack->dts, stime, dtime);
+        pack->duration = av_rescale_q(pack->duration, stime, dtime);
         int ret = av_interleaved_write_frame(avFormatContext, pack);
         if (ret == 0)
         {
@@ -98,10 +122,16 @@ public:
 private:
     // RTMP FLV 封装器
     AVFormatContext* avFormatContext = NULL;
+
     // 视频编码器流
-    const AVCodecContext *avCodecContext = NULL;
+    const AVCodecContext *videoCodecContext = NULL;
+    // 音频编码器流
+    const AVCodecContext *audioCodecContext = NULL;
+
     // 新创建的视频流
     AVStream *videoStream = NULL;
+    // 新创建的音频流
+    AVStream *audioStream = NULL;
 
     string outURL = "";
 };

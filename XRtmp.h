@@ -9,6 +9,9 @@
 struct AVCodecContext;
 struct AVPacket;
 
+/**
+ * 负责封装mux和推流
+ */
 class XRtmp {
 
 public:

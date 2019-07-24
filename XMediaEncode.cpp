@@ -158,13 +158,13 @@ public:
      * @param frame
      * @return
      */
-    AVPacket* EncodevIDEO(AVFrame* frame) {
+    AVPacket* EncodeVideo(AVFrame* frame) {
         // 先释放空间
-        av_packet_unref(&outAvPacket);
+        av_packet_unref(&outVideoPacket);
 
         // 开始h264编码, pts必须递增
-        frame->pts = vpts;
-        vpts++;
+        frame->pts = videoPts;
+        videoPts++;
 
         // 发送原始帧，开始编码
         int ret = avcodec_send_frame(videoCodecContext, frame);
@@ -172,13 +172,95 @@ public:
             return NULL;
         }
 
-        ret = avcodec_receive_packet(videoCodecContext, &outAvPacket);
-        if (ret != 0 || outAvPacket.size <= 0) {
+        ret = avcodec_receive_packet(videoCodecContext, &outVideoPacket);
+        if (ret != 0 || outVideoPacket.size <= 0) {
             return NULL;
         }
 
-        return &outAvPacket;
+        return &outVideoPacket;
     }
+
+
+    ////////////////////////////////////////
+
+    bool InitResample()
+    {
+        ///2 音频重采样 上下文初始化
+        swrContext = NULL;
+        swrContext = swr_alloc_set_opts(swrContext,
+                                 av_get_default_channel_layout(channels), (AVSampleFormat)outSampleFMT, sampleRate,//输出格式
+                                 av_get_default_channel_layout(channels), (AVSampleFormat)inSampleFMT, sampleRate, 0, 0);//输入格式
+        if (!swrContext)
+        {
+            qDebug() << "swrContext failed!";
+            return false;
+        }
+        int ret = swr_init(swrContext);
+        if (ret != 0)
+        {
+            qDebug() << "swr_init failed!";
+            return false;
+        }
+        qDebug() << "音频重采样 上下文初始化成功!";
+
+        ///3 音频重采样输出空间分配
+        pcmAvFrame = av_frame_alloc();
+        pcmAvFrame->format = outSampleFMT;
+        pcmAvFrame->channels = channels;
+        pcmAvFrame->channel_layout = av_get_default_channel_layout(channels);
+        pcmAvFrame->nb_samples = nbSample; //一帧音频一通道的采用数量
+        ret = av_frame_get_buffer(pcmAvFrame, 0); // 给pcm分配存储空间
+        if (ret != 0)
+        {
+            qDebug() << "av_frame_get_buffer failed!";
+            return false;
+        }
+        return true;
+    }
+
+
+    AVFrame *Resample(unsigned char *data)
+    {
+        const uint8_t *indata[AV_NUM_DATA_POINTERS] = { 0 };
+        indata[0] = (uint8_t *)data;
+        int len = swr_convert(swrContext, pcmAvFrame->data, pcmAvFrame->nb_samples, //输出参数，输出存储地址和样本数量
+                              indata, pcmAvFrame->nb_samples
+        );
+        if (len <= 0)
+        {
+            return NULL;
+        }
+        return pcmAvFrame;
+    }
+
+    bool InitAudioCodec()
+    {
+        if (!CreateCodec(AV_CODEC_ID_AAC))
+        {
+            return false;
+        }
+        audioCodecContext->bit_rate = 40000;
+        audioCodecContext->sample_rate = sampleRate;
+        audioCodecContext->sample_fmt = AV_SAMPLE_FMT_FLTP;
+        audioCodecContext->channels = channels;
+        audioCodecContext->channel_layout = av_get_default_channel_layout(channels);
+        return OpenCodec(&audioCodecContext);
+    }
+
+    AVPacket * EncodeAudio(AVFrame* frame)
+    {
+        pcmAvFrame->pts = audioPts;
+        audioPts += av_rescale_q(pcmAvFrame->nb_samples, { 1,sampleRate }, audioCodecContext->time_base);
+        int ret = avcodec_send_frame(audioCodecContext, pcmAvFrame);
+        if (ret != 0)
+            return NULL;
+        av_packet_unref(&outAudioPacket);
+        ret = avcodec_receive_packet(audioCodecContext, &outAudioPacket);
+        if (ret != 0)
+            return NULL;
+        return &outAudioPacket;
+    }
+
 
     /**
      * 关闭资源
@@ -194,15 +276,59 @@ public:
         if (videoCodecContext) {
             avcodec_free_context(&videoCodecContext);
         }
-        vpts = 0;
-        av_packet_unref(&outAvPacket);
+        videoPts = 0;
+        av_packet_unref(&outVideoPacket);
     }
 
 private:
+    // 音频
+    SwrContext* swrContext = NULL;
+    AVFrame* pcmAvFrame = NULL;
+    AVPacket outAudioPacket = {0};
+
+    // 视频
     SwsContext* swsContext = NULL; // 像素格式转换上下文
     AVFrame* yuvAvFrame = NULL; // 存放转换后的YUV数据
-    AVPacket outAvPacket = {0}; // 编码后的数据
-    int vpts = 0;
+    AVPacket outVideoPacket = {0}; // 编码后的数据
+    
+    int videoPts = 0;
+    int audioPts = 0;
+
+
+    bool OpenCodec(AVCodecContext **c)
+    {
+        //打开音频编码器
+        int ret = avcodec_open2(*c, 0, 0);
+        if (ret != 0)
+        {
+            qDebug() << "avcodec_open2 failed!";
+            return false;
+        }
+        qDebug() << "avcodec_open2 success!";
+        return true;
+    }
+
+    bool CreateCodec(AVCodecID cid)
+    {
+        ///4 初始化编码器 AV_CODEC_ID_AAC
+        AVCodec *codec = avcodec_find_encoder(cid);
+        if (!codec)
+        {
+            qDebug() << "avcodec_find_encoder failed!";
+            return false;
+        }
+        //音频编码器上下文
+        audioCodecContext = avcodec_alloc_context3(codec);
+        if (!audioCodecContext)
+        {
+            qDebug() << "avcodec_alloc_context3 failed!";
+            return false;
+        }
+        audioCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+        audioCodecContext->thread_count = XGetCpuNum();
+        return true;
+    }
+
 };
 
 
