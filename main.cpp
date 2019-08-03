@@ -52,7 +52,6 @@ int main(int argc, char *argv[])
     }
 
     ////////////////////////////////////////////
-    /*
     ///1 qt音频开始录制
     cout << "qt音频开始录制" << endl;
     // 音频采集参数
@@ -94,7 +93,6 @@ int main(int argc, char *argv[])
         cout << "InitAudioCodec 错误!" << endl;
         return -1;
     }
-    */
 
     //////////////////////////////////////////////////
     ///5 输出封装器和音频流配置
@@ -105,14 +103,13 @@ int main(int argc, char *argv[])
         cout << "InitMux 错误!" << endl;
         return -1;
     }
-//    //b 添加音频流
-//    if (!xr->AddStream(xe->audioCodecContext))
-//    {
-//        cout << "AddStream audioCodecContext 错误!" << endl;
-//        return -1;
-//    }
-
-    //添加视频流
+    // 添加音频流
+    if (!xr->AddStream(xe->audioCodecContext))
+    {
+        cout << "AddStream audioCodecContext 错误!" << endl;
+        return -1;
+    }
+    // 添加视频流
     if (!xr->AddStream(xe->videoCodecContext))
     {
         cout << "AddStream videoCodecContext 错误!" << endl;
@@ -128,8 +125,8 @@ int main(int argc, char *argv[])
     }
 
     //一次读取一帧音频的字节数
-//    int readSize = xe->nbSample*channels*sampleByte;
-//    char *buf = new char[readSize];
+    int readSize = xe->nbSample*channels*sampleByte;
+    char *buf = new char[readSize];
 
     cout << "------开始推流--------" << endl;
     for (;;)
@@ -159,43 +156,41 @@ int main(int argc, char *argv[])
 
 
 
-        //一次读取一帧音频
-        /*
-        if (input->bytesReady() < readSize)
-        {
-            QThread::msleep(1);
-            continue;
-        }
-        int size = 0;
-        while (size != readSize)
-        {
-            int len = io->read(buf + size, readSize - size);
-            if (len < 0)break;
-            size += len;
-        }
-
-        if (size != readSize)continue;
-
-        //已经读一帧源数据
-        //cout << size << " ";
-        //重采样源数据
-        AVFrame *pcm = xe->Resample((unsigned char*)buf);
-
-        //pts 运算
-        //  nb_sample/sample_rate  = 一帧音频的秒数sec
-        // timebase  pts = sec * timebase.den
-        AVPacket *pkt = xe->EncodeAudio(pcm);
-        if (!pkt)continue;
-        ////推流
-        xr->SendFrame(pkt);
-        if (ret == 0)
-        {
-            cout << "#" << flush;
-        }
-        */
+        //一次读取一帧音频  ----- 这样视频和音频放在一起推流是不能成功的！！！
+//        if (input->bytesReady() < readSize)
+//        {
+//            QThread::msleep(1);
+//            continue;
+//        }
+//        int size = 0;
+//        while (size != readSize)
+//        {
+//            int len = io->read(buf + size, readSize - size);
+//            if (len < 0)break;
+//            size += len;
+//        }
+//
+//        if (size != readSize)continue;
+//
+//        //已经读一帧源数据
+//        //cout << size << " ";
+//        //重采样源数据
+//        AVFrame *pcm = xe->Resample((unsigned char*)buf);
+//
+//        //pts 运算
+//        //  nb_sample/sample_rate  = 一帧音频的秒数sec
+//        // timebase  pts = sec * timebase.den
+//        AVPacket *pkt = xe->EncodeAudio(pcm);
+//        if (!pkt)continue;
+//        ////推流
+//        xr->SendFrame(pkt);
+//        if (ret == 0)
+//        {
+//            cout << "#" << flush;
+//        }
 
     }
-//    delete buf;
+    delete buf;
 
     return a.exec();
 }

@@ -186,11 +186,9 @@ public:
 
 
     ///////////////////////////////////////////////////////////////////////////
-    /*
     bool InitResample()
     {
         ///2 音频重采样 上下文初始化
-        swrContext = NULL;
         swrContext = swr_alloc_set_opts(swrContext,
                                  av_get_default_channel_layout(channels), (AVSampleFormat)outSampleFMT, sampleRate,//输出格式
                                  av_get_default_channel_layout(channels), (AVSampleFormat)inSampleFMT, sampleRate, 0, 0);//输入格式
@@ -265,7 +263,6 @@ public:
             return NULL;
         return &outAudioPacket;
     }
-    */
 
     /**
      * 关闭资源
@@ -287,9 +284,9 @@ public:
 
 private:
     // 音频
-//    SwrContext* swrContext = NULL;
-//    AVFrame* pcmAvFrame = NULL;
-//    AVPacket outAudioPacket = {0};
+    SwrContext* swrContext = NULL;
+    AVFrame* pcmAvFrame = NULL;
+    AVPacket outAudioPacket = {0};
 
     // 视频
     SwsContext* swsContext = NULL; // 像素格式转换上下文
@@ -322,8 +319,8 @@ private:
             cout << "avcodec_find_encoder failed!"<< endl;
             return false;
         }
+
         //音频编码器上下文
-        /*
         audioCodecContext = avcodec_alloc_context3(codec);
         if (!audioCodecContext)
         {
@@ -332,7 +329,6 @@ private:
         }
         audioCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         audioCodecContext->thread_count = XGetCpuNum();
-        */
         return true;
     }
 
