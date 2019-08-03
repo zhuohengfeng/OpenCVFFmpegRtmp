@@ -101,8 +101,6 @@ public:
         pack->pts = av_rescale_q(pack->pts, stime, dtime);
         pack->dts = av_rescale_q(pack->dts, stime, dtime);
         pack->duration = av_rescale_q(pack->duration, stime, dtime);
-        cout << "SendFrame  pack->pts =" << pack->pts  << endl;
-        cout << "SendFrame  pack->dts =" << pack->dts  << endl;
         int ret = av_interleaved_write_frame(avFormatContext, pack);
         if (ret == 0)
         {

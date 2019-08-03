@@ -136,7 +136,7 @@ public:
         videoCodecContext->thread_count = XGetCpuNum();
         cout << "InitVideoCodec 获取CUP NUM: " << videoCodecContext->thread_count << endl;
         //压缩后每秒视频的bit位大小 50kB
-        videoCodecContext->bit_rate = 50 *1024 * 8; //
+        videoCodecContext->bit_rate = 10 *1024 * 1024; //
         videoCodecContext->width = outWidth;
         videoCodecContext->height = outHeight;
         videoCodecContext->time_base = {1, fps};
