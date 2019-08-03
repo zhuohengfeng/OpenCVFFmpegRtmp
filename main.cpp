@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     xe->inHeight = inHeight;
     xe->outWidth = inWidth;
     xe->outHeight = inHeight;
-    xe->InitScale();
+    xe->InitScale(); // 初始化Scale,用来做格式转换用
 
     ///4 初始化编码上下文
     //a 找到编码器
@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
     }
 
     ////////////////////////////////////////////
+    /*
     ///1 qt音频开始录制
     cout << "qt音频开始录制" << endl;
     // 音频采集参数
@@ -93,6 +94,7 @@ int main(int argc, char *argv[])
         cout << "InitAudioCodec 错误!" << endl;
         return -1;
     }
+    */
 
     //////////////////////////////////////////////////
     ///5 输出封装器和音频流配置
@@ -103,12 +105,12 @@ int main(int argc, char *argv[])
         cout << "InitMux 错误!" << endl;
         return -1;
     }
-    //b 添加音频流
-    if (!xr->AddStream(xe->audioCodecContext))
-    {
-        cout << "AddStream audioCodecContext 错误!" << endl;
-        return -1;
-    }
+//    //b 添加音频流
+//    if (!xr->AddStream(xe->audioCodecContext))
+//    {
+//        cout << "AddStream audioCodecContext 错误!" << endl;
+//        return -1;
+//    }
 
     //添加视频流
     if (!xr->AddStream(xe->videoCodecContext))
@@ -126,8 +128,8 @@ int main(int argc, char *argv[])
     }
 
     //一次读取一帧音频的字节数
-    int readSize = xe->nbSample*channels*sampleByte;
-    char *buf = new char[readSize];
+//    int readSize = xe->nbSample*channels*sampleByte;
+//    char *buf = new char[readSize];
 
     cout << "------开始推流--------" << endl;
     for (;;)
@@ -158,6 +160,7 @@ int main(int argc, char *argv[])
 
 
         //一次读取一帧音频
+        /*
         if (input->bytesReady() < readSize)
         {
             QThread::msleep(1);
@@ -189,10 +192,10 @@ int main(int argc, char *argv[])
         {
             cout << "#" << flush;
         }
-
+        */
 
     }
-    delete buf;
+//    delete buf;
 
     return a.exec();
 }

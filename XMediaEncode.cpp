@@ -5,6 +5,7 @@
 #include "XMediaEncode.h"
 #include "main.h"
 
+using namespace std;
 
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
@@ -57,7 +58,7 @@ class CXMediaEncode : public XMediaEncode {
 public:
 
     /**
-     * 初始化格式转换上下文
+     * 初始化格式转换上下文 RGB->YUV
      * @return
      */
     bool InitScale() {
@@ -68,7 +69,7 @@ public:
                                           0, 0, 0);
 
         if (!swsContext) {
-            qDebug() << "[Error] 初始化格式转换上下文sws_getCachedContext失败";
+            cout << "[Error] 初始化格式转换上下文sws_getCachedContext失败" << endl;
             return false;
         }
         // 初始化输出的数据结构，这个时候还没开始转换，内容是空的
@@ -78,12 +79,12 @@ public:
         yuvAvFrame->height = inHeight;
         yuvAvFrame->pts = 0;
         // 实际分配yuv空间
-        int ret = av_frame_get_buffer(yuvAvFrame, 32);
+        int ret = av_frame_get_buffer(yuvAvFrame, 0);
         if (ret != 0) {
-            qDebug() << "[Error] av_frame_get_buffer失败";
+            cout << "[Error] av_frame_get_buffer失败" << endl;
             return false;
         }
-
+        cout << "XMediaEncode InitScale 完成"<< endl;
         return true;
     }
 
@@ -104,6 +105,7 @@ public:
         int h = sws_scale(swsContext, indata, insize, 0, inHeight,
                           yuvAvFrame->data, yuvAvFrame->linesize);
         if (h <= 0) {
+            cout << "[Error]RGBToYUV h <= 0" << endl;
             return NULL;
         }
 
@@ -119,20 +121,20 @@ public:
         // 找到编码器
         AVCodec* videoCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
         if (!videoCodec) {
-            qDebug() << "InitVideoCodec 获取解码器出错";
+            cout << "InitVideoCodec 获取解码器出错" << endl;
             return false;
         }
         // 创建编码器上下文
         videoCodecContext = avcodec_alloc_context3(videoCodec);
         if (!videoCodecContext) {
-            qDebug() << "InitVideoCodec 获取解码器上下文出错";
+            cout << "InitVideoCodec 获取解码器上下文出错" << endl;
             return false;
         }
         // 配置编码器参数
         videoCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         videoCodecContext->codec_id = videoCodec->id;
         videoCodecContext->thread_count = XGetCpuNum();
-        qDebug() << "InitVideoCodec 获取CUP NUM: " << videoCodecContext->thread_count;
+        cout << "InitVideoCodec 获取CUP NUM: " << videoCodecContext->thread_count << endl;
         //压缩后每秒视频的bit位大小 50kB
         videoCodecContext->bit_rate = 50 *1024 * 8; //
         videoCodecContext->width = outWidth;
@@ -140,17 +142,18 @@ public:
         videoCodecContext->time_base = {1, fps};
         videoCodecContext->framerate = {fps, 1};
         // 画面组的大小，多少帧一个关键帧
-        videoCodecContext->gop_size = 50;
+        videoCodecContext->gop_size = 10;
         videoCodecContext->max_b_frames = 0;
         videoCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
 
         // 打开编码器上下文
         ret = avcodec_open2(videoCodecContext, 0, 0);
         if (ret != 0) {
-            qDebug() << "avcodec_open2出错";
+            cout << "avcodec_open2出错" << endl;
             return false;
         }
 
+        cout << "XMediaEncode InitVideoCodec 完成"<< endl;
         return true;
     }
 
@@ -183,7 +186,7 @@ public:
 
 
     ///////////////////////////////////////////////////////////////////////////
-
+    /*
     bool InitResample()
     {
         ///2 音频重采样 上下文初始化
@@ -193,13 +196,13 @@ public:
                                  av_get_default_channel_layout(channels), (AVSampleFormat)inSampleFMT, sampleRate, 0, 0);//输入格式
         if (!swrContext)
         {
-            qDebug() << "swrContext failed!";
+            cout << "swrContext failed!"<< endl;
             return false;
         }
         int ret = swr_init(swrContext);
         if (ret != 0)
         {
-            qDebug() << "swr_init failed!";
+            cout << "swr_init failed!"<< endl;
             return false;
         }
 
@@ -212,11 +215,11 @@ public:
         ret = av_frame_get_buffer(pcmAvFrame, 0); // 给pcm分配存储空间
         if (ret != 0)
         {
-            qDebug() << "av_frame_get_buffer failed!";
+            cout << "av_frame_get_buffer failed!"<< endl;
             return false;
         }
 
-        qDebug() << "音频重采样 上下文初始化成功!";
+        cout << "音频重采样 上下文初始化成功!"<< endl;
         return true;
     }
 
@@ -262,7 +265,7 @@ public:
             return NULL;
         return &outAudioPacket;
     }
-
+    */
 
     /**
      * 关闭资源
@@ -284,9 +287,9 @@ public:
 
 private:
     // 音频
-    SwrContext* swrContext = NULL;
-    AVFrame* pcmAvFrame = NULL;
-    AVPacket outAudioPacket = {0};
+//    SwrContext* swrContext = NULL;
+//    AVFrame* pcmAvFrame = NULL;
+//    AVPacket outAudioPacket = {0};
 
     // 视频
     SwsContext* swsContext = NULL; // 像素格式转换上下文
@@ -303,10 +306,10 @@ private:
         int ret = avcodec_open2(*c, 0, 0);
         if (ret != 0)
         {
-            qDebug() << "avcodec_open2 failed!";
+            cout << "avcodec_open2 failed!"<< endl;
             return false;
         }
-        qDebug() << "avcodec_open2 success!";
+        cout << "avcodec_open2 success!"<< endl;
         return true;
     }
 
@@ -316,18 +319,20 @@ private:
         AVCodec *codec = avcodec_find_encoder(cid);
         if (!codec)
         {
-            qDebug() << "avcodec_find_encoder failed!";
+            cout << "avcodec_find_encoder failed!"<< endl;
             return false;
         }
         //音频编码器上下文
+        /*
         audioCodecContext = avcodec_alloc_context3(codec);
         if (!audioCodecContext)
         {
-            qDebug() << "avcodec_alloc_context3 failed!";
+            cout << "avcodec_alloc_context3 failed!"<< endl;
             return false;
         }
         audioCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         audioCodecContext->thread_count = XGetCpuNum();
+        */
         return true;
     }
 
@@ -339,9 +344,9 @@ private:
 XMediaEncode *XMediaEncode::getInstance(unsigned char index) {
     static bool isFirst = true; // 注意这里，可以直接在这里定义，也是只有一份
     if (isFirst) {
-        qDebug() << "XMediaEncode 首次启动初始化";
+        cout << "XMediaEncode 首次启动初始化"<< endl;
         // 注册所有ffmpeg的编解码器
-        av_register_all();
+        av_register_all(); //注册FFmpeg所有编解码器。
         avcodec_register_all();
         isFirst = false;
     }

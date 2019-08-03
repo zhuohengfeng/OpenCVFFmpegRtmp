@@ -12,7 +12,6 @@ class CXRtmp : public XRtmp {
 
 public:
 
-
     // 初始化封装器MUX上下文
     bool InitMux(const char* url) {
         // 输出封装器和视频流配置
@@ -94,6 +93,7 @@ public:
         }
         else
         {
+            cout << "[Error] SendFrame 类型错误！！！！ " << endl;
             return false;
         }
 
@@ -101,12 +101,14 @@ public:
         pack->pts = av_rescale_q(pack->pts, stime, dtime);
         pack->dts = av_rescale_q(pack->dts, stime, dtime);
         pack->duration = av_rescale_q(pack->duration, stime, dtime);
+        cout << "SendFrame  pack->pts =" << pack->pts  << endl;
+        cout << "SendFrame  pack->dts =" << pack->dts  << endl;
         int ret = av_interleaved_write_frame(avFormatContext, pack);
         if (ret == 0)
         {
-            qDebug() << "SendFrame 出错";
             return true;
         }
+        qDebug() << "SendFrame 出错";
         return false;
     }
 
