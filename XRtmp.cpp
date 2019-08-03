@@ -143,10 +143,9 @@ XRtmp *XRtmp::getInstance(unsigned char index) {
     static CXRtmp rtmp[255];
     static bool isFirst = true;
     if (isFirst) {
+        qDebug() << "XRtmp 首次启动初始化";
         av_register_all();
-
         avformat_network_init();
-
         isFirst = false;
     }
 

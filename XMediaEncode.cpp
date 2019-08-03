@@ -43,7 +43,7 @@ static int XGetCpuNum()
 //        if (numCPU < 1)
 //            numCPU = 1;
 //    }
-    return (int)numCPU;
+    return 2;//(int)numCPU;
 #else
     return 1;
 #endif
@@ -119,19 +119,20 @@ public:
         // 找到编码器
         AVCodec* videoCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
         if (!videoCodec) {
-            qDebug() << "获取解码器出错";
+            qDebug() << "InitVideoCodec 获取解码器出错";
             return false;
         }
         // 创建编码器上下文
         videoCodecContext = avcodec_alloc_context3(videoCodec);
         if (!videoCodecContext) {
-            qDebug() << "获取解码器上下文出错";
+            qDebug() << "InitVideoCodec 获取解码器上下文出错";
             return false;
         }
         // 配置编码器参数
         videoCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         videoCodecContext->codec_id = videoCodec->id;
         videoCodecContext->thread_count = XGetCpuNum();
+        qDebug() << "InitVideoCodec 获取CUP NUM: " << videoCodecContext->thread_count;
         //压缩后每秒视频的bit位大小 50kB
         videoCodecContext->bit_rate = 50 *1024 * 8; //
         videoCodecContext->width = outWidth;
@@ -181,7 +182,7 @@ public:
     }
 
 
-    ////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
 
     bool InitResample()
     {
@@ -201,7 +202,6 @@ public:
             qDebug() << "swr_init failed!";
             return false;
         }
-        qDebug() << "音频重采样 上下文初始化成功!";
 
         ///3 音频重采样输出空间分配
         pcmAvFrame = av_frame_alloc();
@@ -215,6 +215,8 @@ public:
             qDebug() << "av_frame_get_buffer failed!";
             return false;
         }
+
+        qDebug() << "音频重采样 上下文初始化成功!";
         return true;
     }
 

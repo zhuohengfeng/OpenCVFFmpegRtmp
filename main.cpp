@@ -16,15 +16,48 @@ int main(int argc, char *argv[])
     Dialog w;
     w.show();
 
-
-
-    char *outUrl = "rtmp://192.168.1.44/live";
     int ret = 0;
+    char *outUrl = "rtmp://10.88.7.193/live";
+
+    // 视频采集
+    VideoCapture cam;
+    Mat frame;
+
+    /// 1 使用opencv打开rtsp相机
+    cam.open(0);
+    if (!cam.isOpened())
+    {
+        cout << "cam open failed!" << endl;
+        return -1;
+    }
+    int inWidth = cam.get(CAP_PROP_FRAME_WIDTH);
+    int inHeight = cam.get(CAP_PROP_FRAME_HEIGHT);
+    int fps = cam.get(CAP_PROP_FPS);
+    cout << "打开相机成功 inWidth="<<inWidth <<", inHeight="<< inHeight<<", fps=" <<fps << endl;
+
+    XMediaEncode *xe = XMediaEncode::getInstance(0);
+    ///2 初始化格式转换上下文, RGB->YUV
+    ///3 初始化输出的数据结构
+    xe->inWidth = inWidth;
+    xe->inHeight = inHeight;
+    xe->outWidth = inWidth;
+    xe->outHeight = inHeight;
+    xe->InitScale();
+
+    ///4 初始化编码上下文
+    //a 找到编码器
+    if (!xe->InitVideoCodec()){
+        cout << "InitVideoCodec failed!" << endl;
+        return -1;
+    }
+
+    ////////////////////////////////////////////
+    ///1 qt音频开始录制
+    cout << "qt音频开始录制" << endl;
+    // 音频采集参数
     int sampleRate = 44100;
     int channels = 2;
     int sampleByte = 2;
-
-    ///1 qt音频开始录制
     QAudioFormat fmt;
     fmt.setSampleRate(sampleRate);
     fmt.setChannelCount(channels);
@@ -43,8 +76,7 @@ int main(int argc, char *argv[])
     QIODevice *io = input->start();
 
 
-    ///2 音频重采样 上下文初始化
-    XMediaEncode *xe = XMediaEncode::getInstance(0);
+    ///2 音频重采样 上下文初始化   16bit转成FLATP
     xe->channels = channels;
     xe->nbSample = 1024;
     xe->sampleRate = sampleRate;
@@ -52,28 +84,36 @@ int main(int argc, char *argv[])
     xe->outSampleFMT = XSampleFMT::X_FLATP;
     if (!xe->InitResample())
     {
-        getchar();
+        cout << "InitResample 错误!" << endl;
         return -1;
     }
     ///4 初始化音频编码器
     if (!xe->InitAudioCodec())
     {
-        getchar();
+        cout << "InitAudioCodec 错误!" << endl;
         return -1;
     }
 
+    //////////////////////////////////////////////////
     ///5 输出封装器和音频流配置
     //a 创建输出封装器上下文
     XRtmp *xr = XRtmp::getInstance(0);
     if (!xr->InitMux(outUrl))
     {
-        getchar();
+        cout << "InitMux 错误!" << endl;
         return -1;
     }
     //b 添加音频流
     if (!xr->AddStream(xe->audioCodecContext))
     {
-        getchar();
+        cout << "AddStream audioCodecContext 错误!" << endl;
+        return -1;
+    }
+
+    //添加视频流
+    if (!xr->AddStream(xe->videoCodecContext))
+    {
+        cout << "AddStream videoCodecContext 错误!" << endl;
         return -1;
     }
 
@@ -81,14 +121,42 @@ int main(int argc, char *argv[])
     //写入封装头
     if (!xr->SendMuxHead())
     {
-        getchar();
+        cout << "SendMuxHead 错误!" << endl;
         return -1;
     }
+
     //一次读取一帧音频的字节数
     int readSize = xe->nbSample*channels*sampleByte;
     char *buf = new char[readSize];
+
+    cout << "------开始推流--------" << endl;
     for (;;)
     {
+
+        ///读取rtsp视频帧，解码视频帧
+        if (!cam.grab())
+        {
+            continue;
+        }
+        ///yuv转换为rgb
+        if (!cam.retrieve(frame))
+        {
+            continue;
+        }
+        ///rgb to yuv
+        xe->inPixSize = frame.elemSize();
+        cout << " frame.elemSize = " << xe->inPixSize << endl;
+        AVFrame *yuv = xe->RGBToYUV((unsigned  char*)frame.data);
+        if (!yuv) continue;
+
+        ///h264编码
+        AVPacket *pack = xe->EncodeVideo(yuv);
+        if (!pack) continue;
+
+        xr->SendFrame(pack);
+
+
+
         //一次读取一帧音频
         if (input->bytesReady() < readSize)
         {
@@ -122,9 +190,9 @@ int main(int argc, char *argv[])
             cout << "#" << flush;
         }
 
+
     }
     delete buf;
 
-    getchar();
     return a.exec();
 }
