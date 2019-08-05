@@ -25,16 +25,16 @@ public:
     }
 
     // 添加视频或者音频流---这里的codecContext是XMediaEncode中创建后传入
-    bool AddStream(const AVCodecContext* codecContext) {
+    int AddStream(const AVCodecContext* codecContext) {
         if (!codecContext) {
-            return false;
+            return -1;
         }
 
         // 添加视频流
         AVStream* avStream = avformat_new_stream(avFormatContext, NULL);
         if (!avStream) {
             qDebug() << "avformat_new_stream 出错";
-            return false;
+            return -1;
         }
 
         avStream->codecpar->codec_tag = 0; //
@@ -45,14 +45,12 @@ public:
         if (codecContext->codec_type == AVMEDIA_TYPE_VIDEO) {
             this->videoCodecContext = codecContext;
             this->videoStream = avStream;
-            this->video_stream_index = avStream->index;
         }
         else if (codecContext->codec_type == AVMEDIA_TYPE_AUDIO) {
             this->audioCodecContext = codecContext;
             this->audioStream = avStream;
-            this->audio_steam_index = avStream->index;
         }
-        return true;
+        return avStream->index;
     }
 
     // 打开RTMP网络IO，发送封装头MUX
@@ -76,8 +74,9 @@ public:
     }
 
     // RTMP推流
-    bool SendFrame(AVPacket* pack) {
-        if (pack->size <= 0 || !pack->data)return false;
+    bool SendFrame(AVPacket* pack, int streamIndex) {
+        if (!pack || pack->size <= 0 || !pack->data)return false;
+        pack->stream_index = streamIndex;
 
         AVRational stime;
         AVRational dtime;
@@ -87,13 +86,11 @@ public:
         {
             stime = videoCodecContext->time_base;
             dtime = videoStream->time_base;
-            pack->stream_index = video_stream_index;
         }
         else if (audioStream && audioCodecContext &&pack->stream_index == audioStream->index)
         {
             stime = audioCodecContext->time_base;
             dtime = audioStream->time_base;
-            pack->stream_index = audio_steam_index;
         }
         else
         {
@@ -138,9 +135,6 @@ private:
     AVStream *audioStream = NULL;
 
     string outURL = "";
-
-    int video_stream_index = -1;
-    int audio_steam_index = -1;
 };
 
 

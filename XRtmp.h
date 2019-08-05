@@ -23,13 +23,13 @@ public:
     virtual bool InitMux(const char* url) = 0;
 
     // 添加视频或者音频流
-    virtual bool AddStream(const AVCodecContext* codecContext) = 0;
+    virtual int AddStream(const AVCodecContext* codecContext) = 0;
 
     // 打开RTMP网络IO，发送封装头MUX
     virtual bool SendMuxHead() = 0;
 
     // RTMP推流
-    virtual bool SendFrame(AVPacket* pkt) = 0;
+    virtual bool SendFrame(AVPacket* pack, int streamIndex) = 0;
 
     virtual void Close() = 0;
 
