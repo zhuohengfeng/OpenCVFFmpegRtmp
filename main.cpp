@@ -156,38 +156,38 @@ int main(int argc, char *argv[])
 
 
 
-        //一次读取一帧音频  ----- 这样视频和音频放在一起推流是不能成功的！！！
-//        if (input->bytesReady() < readSize)
-//        {
-//            QThread::msleep(1);
-//            continue;
-//        }
-//        int size = 0;
-//        while (size != readSize)
-//        {
-//            int len = io->read(buf + size, readSize - size);
-//            if (len < 0)break;
-//            size += len;
-//        }
-//
-//        if (size != readSize)continue;
-//
-//        //已经读一帧源数据
-//        //cout << size << " ";
-//        //重采样源数据
-//        AVFrame *pcm = xe->Resample((unsigned char*)buf);
-//
-//        //pts 运算
-//        //  nb_sample/sample_rate  = 一帧音频的秒数sec
-//        // timebase  pts = sec * timebase.den
-//        AVPacket *pkt = xe->EncodeAudio(pcm);
-//        if (!pkt)continue;
-//        ////推流
-//        xr->SendFrame(pkt);
-//        if (ret == 0)
-//        {
-//            cout << "#" << flush;
-//        }
+        //一次读取一帧音频  ----- 这样视频和音频放在一起推流是不能成功的！！！因为没设置stream_id
+        if (input->bytesReady() < readSize)
+        {
+            QThread::msleep(1);
+            continue;
+        }
+        int size = 0;
+        while (size != readSize)
+        {
+            int len = io->read(buf + size, readSize - size);
+            if (len < 0)break;
+            size += len;
+        }
+
+        if (size != readSize)continue;
+
+        //已经读一帧源数据
+        //cout << size << " ";
+        //重采样源数据
+        AVFrame *pcm = xe->Resample((unsigned char*)buf);
+
+        //pts 运算
+        //  nb_sample/sample_rate  = 一帧音频的秒数sec
+        // timebase  pts = sec * timebase.den
+        AVPacket *pkt = xe->EncodeAudio(pcm);
+        if (!pkt)continue;
+        ////推流
+        xr->SendFrame(pkt);
+        if (ret == 0)
+        {
+            cout << "#" << flush;
+        }
 
     }
     delete buf;

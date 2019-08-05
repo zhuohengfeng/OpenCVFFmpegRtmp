@@ -33,7 +33,7 @@ add_executable(OpenCVFFmpegRtmp
         main.cpp
         dialog.cpp
         XMediaEncode.cpp
-        XRtmp.cpp)
+        XRtmp.cpp XData.cpp XData.h XDataThread.cpp XDataThread.h XVideoCapture.cpp XVideoCapture.h XAudioRecord.cpp XAudioRecord.h)
 
 # 链接库文件
 TARGET_LINK_LIBRARIES(OpenCVFFmpegRtmp

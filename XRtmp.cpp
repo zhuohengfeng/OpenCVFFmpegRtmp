@@ -45,10 +45,12 @@ public:
         if (codecContext->codec_type == AVMEDIA_TYPE_VIDEO) {
             this->videoCodecContext = codecContext;
             this->videoStream = avStream;
+            this->video_stream_index = avStream->index;
         }
         else if (codecContext->codec_type == AVMEDIA_TYPE_AUDIO) {
             this->audioCodecContext = codecContext;
             this->audioStream = avStream;
+            this->audio_steam_index = avStream->index;
         }
         return true;
     }
@@ -85,11 +87,13 @@ public:
         {
             stime = videoCodecContext->time_base;
             dtime = videoStream->time_base;
+            pack->stream_index = video_stream_index;
         }
         else if (audioStream && audioCodecContext &&pack->stream_index == audioStream->index)
         {
             stime = audioCodecContext->time_base;
             dtime = audioStream->time_base;
+            pack->stream_index = audio_steam_index;
         }
         else
         {
@@ -134,6 +138,9 @@ private:
     AVStream *audioStream = NULL;
 
     string outURL = "";
+
+    int video_stream_index = -1;
+    int audio_steam_index = -1;
 };
 
 
